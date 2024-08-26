@@ -1,0 +1,75 @@
+name: Docker Workflow
+
+# Eventos que disparam o workflow
+on:
+  push:
+    branches:
+      - main # Dispara quando há push na branch main
+  pull_request:
+    branches:
+      - main # Dispara em pull requests na branch main
+  schedule:
+    - cron: "0 2 * * *" # Dispara diariamente às 2h da manhã
+  workflow_dispatch: # Permite disparar manualmente pelo GitHub
+
+# Definição dos jobs
+jobs:
+  build:
+    runs-on: ubuntu-latest # Usa Ubuntu como sistema operacional base
+
+    steps:
+      # Step 1: Faz checkout do código do repositório
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Configura o Docker Buildx para buildar imagens Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Step 3: Realiza login no DockerHub usando secrets do GitHub (nome de usuário e senha)
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 4: Constrói a imagem Docker e adiciona uma tag
+      - name: Build and tag Docker image
+        run: |
+          docker build -t my-docker-image .
+          docker tag my-docker-image:latest my-dockerhub-username/my-docker-image:latest
+
+      # Step 5: Realiza o push da imagem Docker para o DockerHub
+      - name: Push Docker image to DockerHub
+        run: |
+          docker push my-dockerhub-username/my-docker-image:latest
+
+  test:
+    runs-on: ubuntu-latest # Usa Ubuntu como sistema operacional base
+    needs: build # Define dependência do job anterior (build)
+
+    steps:
+      # Step 1: Faz checkout do código do repositório
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Puxa a imagem Docker do DockerHub
+      - name: Pull Docker image from DockerHub
+        run: |
+          docker pull my-dockerhub-username/my-docker-image:latest
+
+      # Step 3: Executa o container Docker com a imagem baixada
+      - name: Run Docker container
+        run: |
+          docker run --name my-container -d my-dockerhub-username/my-docker-image:latest
+
+      # Step 4: Executa testes dentro do container Docker
+      - name: Run tests inside Docker container
+        run: |
+          docker exec my-container ./run-tests.sh
+
+      # Step 5: Para e remove o container Docker após os testes
+      - name: Stop and remove Docker container
+        run: |
+          docker stop my-container
+          docker rm my-container
