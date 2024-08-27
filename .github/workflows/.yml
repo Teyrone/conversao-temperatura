@@ -15,15 +15,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Run a simple command
-        run: echo "Hello World"
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4.0.3
+        with:
+          node-version: '16.x' # Especifica a versão do Node.js
+          check-latest: true # Verifica se há a última versão disponível
+          cache: 'npm' # Define o gerenciador de pacotes que será cacheado
+          cache-dependency-path: 'package-lock.json' # Arquivo para dependências
 
-      # Executando um script multi-linhas
-      - name: Run a multi-line script
-        run: |
-          echo "Add other actions to build,"
-          echo "test, and deploy your project."
+      - name: Install Dependencies
+        run: npm install
 
+      - name: Run Tests
+        run: npm test
 
-
-     
